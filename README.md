@@ -85,6 +85,97 @@ Durante a execução, será solicitado:
 
 ***
 
+
+
+## 🔥 Liberação de Firewall Local (Porta SFTP)
+
+### Visão geral
+
+O script **não gerencia regras de firewall**.  
+Caso o firewall local esteja ativo, é necessário **liberar manualmente a porta configurada para o SFTP** (padrão: `2222`).
+
+A liberação depende da ferramenta de firewall utilizada no sistema operacional.
+
+***
+
+### 🔹 UFW (padrão no Ubuntu)
+
+Verificar status:
+
+```bash
+ufw status
+```
+
+Liberar a porta SFTP:
+
+```bash
+ufw allow 2222/tcp
+```
+
+Recarregar regras:
+
+```bash
+ufw reload
+```
+
+Validar:
+
+```bash
+ufw status | grep 2222
+```
+
+***
+
+### 🔹 firewalld (menos comum no Ubuntu)
+
+Verificar status:
+
+```bash
+systemctl status firewalld
+```
+
+Liberar a porta SFTP:
+
+```bash
+firewall-cmd --permanent --add-port=2222/tcp
+firewall-cmd --reload
+```
+
+Validar:
+
+```bash
+firewall-cmd --list-ports
+```
+
+***
+
+### 🔹 iptables (ambientes legados)
+
+Liberar a porta:
+
+```bash
+iptables -A INPUT -p tcp --dport 2222 -j ACCEPT
+```
+
+Salvar regras (exemplo):
+
+```bash
+iptables-save > /etc/iptables/rules.v4
+```
+
+***
+
+### Observações importantes
+
+* A porta liberada deve **corresponder ao valor definido na variável `SFTP_PORT`** do script.
+* Caso exista firewall **externo** (cloud, appliance ou security group), a liberação também deve ser aplicada nesse nível.
+* A ausência de liberação de firewall pode resultar em:
+  * Porta não acessível externamente
+  * Timeout de conexão
+  * Serviço funcionando localmente, mas inacessível remotamente
+
+***
+
 ## 🔍 Como validar se funcionou
 
 ### ✅ Verificar serviço
@@ -115,6 +206,11 @@ LISTEN 0 128 0.0.0.0:2222
 
 ***
 
+### ✅ De outro host:
+
+```bash
+nc -vz IP_DO_SERVIDOR 2222
+
 ### ✅ Teste local
 
 ```bash
@@ -128,6 +224,7 @@ sftp -P 2222 usuario_sftp@IP_DO_SERVIDOR
 ```
 
 ***
+
 
 ## 🧹 Como remover tudo (rollback)
 
