@@ -1,42 +1,40 @@
 #!/bin/bash
-# =========================================================
-# Script: remove_sftp_dedicado.sh
-# Objetivo: Remover completamente o SFTP dedicado
-# Ambiente: Ubuntu 24.04
-# Execução: root
-# =========================================================
-
-set -e
 
 SFTP_USER="usuario_sftp"
 SFTP_GROUP="sftpusers"
 BASE_DIR="/sftp"
-SERVICE_NAME="ssh-sftp"
 
-echo "==> Parando serviço ssh-sftp (se existir)"
-systemctl stop ${SERVICE_NAME} 2>/dev/null || true
-systemctl disable ${SERVICE_NAME} 2>/dev/null || true
+echo "🧹 Iniciando remoção da configuração SFTP dedicada..."
 
-echo "==> Removendo service file"
-rm -f /etc/systemd/system/${SERVICE_NAME}.service
+if [[ $EUID -ne 0 ]]; then
+   echo "❌ Execute como root." 
+   exit 1
+fi
 
-echo "==> Recarregando systemd"
-systemctl daemon-reexec
+# 1. Parar e remover serviço
+echo "Parando serviço ssh-sftp..."
+systemctl stop ssh-sftp || true
+systemctl disable ssh-sftp || true
+[ -f /etc/systemd/system/ssh-sftp.service ] && rm -f /etc/systemd/system/ssh-sftp.service
 systemctl daemon-reload
 
-echo "==> Removendo arquivo sshd_config_sftp"
+# 2. Remover arquivos de configuração
 rm -f /etc/ssh/sshd_config_sftp
 
-echo "==> Removendo diretórios de chroot"
-rm -rf ${BASE_DIR}
+# 3. Remover usuário e grupo
+echo "Removendo usuário e grupo..."
+userdel -r "$SFTP_USER" || echo "Usuário já removido."
 
-echo "==> Removendo usuário SFTP"
-id ${SFTP_USER} >/dev/null 2>&1 && userdel ${SFTP_USER} || true
+# Verificar se o grupo ainda existe e se está vazio antes de remover
+if getent group "$SFTP_GROUP" > /dev/null; then
+    groupdel "$SFTP_GROUP"
+fi
 
-echo "==> Removendo grupo SFTP"
-getent group ${SFTP_GROUP} >/dev/null && groupdel ${SFTP_GROUP} || true
+# 4. Limpar diretórios
+if [ -d "$BASE_DIR" ]; then
+    echo "Removendo diretório base $BASE_DIR..."
+    rm -rf "$BASE_DIR"
+fi
 
-echo "==> Limpando diretório runtime (se existir)"
-rm -rf /run/sshd
-
-echo "✅ Remoção completa do SFTP dedicado finalizada"
+echo "✅ Remoção concluída com sucesso."
+echo "O serviço SSH padrão na porta 22 continua operando normalmente."

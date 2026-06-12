@@ -176,12 +176,12 @@ iptables-save > /etc/iptables/rules.v4
 
 ***
 
-## 🔍 Como validar se funcionou
+## 🔍 Validação
 
 ### ✅ Verificar serviço
 
 ```bash
-systemctl status ssh-sftp
+sudo systemctl status ssh-sftp --no-pager
 ```
 
 Resultado esperado:
@@ -210,6 +210,7 @@ LISTEN 0 128 0.0.0.0:2222
 
 ```bash
 nc -vz IP_DO_SERVIDOR 2222
+```
 
 ### ✅ Teste local
 
